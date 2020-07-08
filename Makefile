@@ -44,7 +44,8 @@ coverage = -c tests/coverage.json --coverage-from-egg
 endif
 
 # REVISIT
-conda_recipes_branch ?= revisit_build_tools
+#conda_recipes_branch ?= revisit_build_tools
+conda_recipes_branch ?= master
 
 conda_base = $(patsubst %/bin/conda,%,$(conda))
 conda_activate = $(conda_base)/bin/activate
