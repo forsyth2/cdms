@@ -7,30 +7,49 @@ SHELL = /bin/bash
 os = $(shell uname)
 pkg_name = cdms2
 repo_name = cdms
+
+user = cdat
+label = nightly
+
 build_script = conda-recipes/build_tools/conda_build.py
 
 test_pkgs = testsrunner pytest
 last_stable ?= 8.2
 
-conda_env ?= base
-workdir ?= $(PWD)/workspace
+conda_build_env=build-$(pkg_name)
+conda_test_env=test-$(pkg_name)
+
 branch ?= $(shell git rev-parse --abbrev-ref HEAD)
 extra_channels ?= cdat/label/nightly conda-forge
 conda ?= $(or $(CONDA_EXE),$(shell find /opt/*conda*/bin $(HOME)/*conda* -type f -iname conda))
-artifact_dir ?= $(PWD)/artifacts
 conda_env_filename ?= spec-file
+
+ifeq ($(workdir),)
+ifeq ($(wildcard $(PWD)/.tempdir),)
+workdir = $(shell mktemp -d -t "build_$(pkg_name).XXXXXXXX")
+$(shell echo $(workdir) > $(PWD)/.tempdir)
+endif
+
+workdir := $(shell cat $(PWD)/.tempdir)
+endif
+
+$(info $(workdir))
+
+artif_dir = $(workdir)/$(artifact_dir)
+
 build_version ?= 3.7
 
 ifneq ($(coverage),)
 coverage = -c tests/coverage.json --coverage-from-egg
 endif
 
-conda_recipes_branch ?= master
+# REVISIT
+conda_recipes_branch ?= revisit_build_tools
 
 conda_base = $(patsubst %/bin/conda,%,$(conda))
 conda_activate = $(conda_base)/bin/activate
 
-conda_build_extra = --copy_conda_package $(artifact_dir)
+conda_build_extra = --copy_conda_package $(artif_dir)
 
 ifndef $(local_repo)
 local_repo = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -49,6 +68,11 @@ else
 	cd $(workdir)/conda-recipes; git pull
 endif
 
+clean:
+	rm -rf $(shell cat .tempdir)
+
+	rm -f .tempdir
+
 setup-tests:
 	source $(conda_activate) base; conda create -y -n $(conda_env) --use-local \
 		$(foreach x,$(extra_channels),-c $(x)) $(pkg_name) $(foreach x,$(test_pkgs),"$(x)") \
@@ -60,7 +84,7 @@ conda-rerender: setup-build
 		--conda_activate $(conda_activate)
 
 conda-build:
-	mkdir -p $(artifact_dir)
+	mkdir -p $(artif_dir)
 
 	python $(workdir)/$(build_script) -w $(workdir) -p $(pkg_name) --build_version $(build_version) \
 		--do_build --conda_env $(conda_env) --extra_channels $(extra_channels) \
@@ -68,12 +92,12 @@ conda-build:
 
 conda-upload:
 	source $(conda_activate) $(conda_env); \
-		anaconda -t $(conda_upload_token) upload -u $(user) -l $(label) --force $(artifact_dir)/*.tar.bz2
+		anaconda -t $(conda_upload_token) upload -u $(user) -l $(label) --force $(artif_dir)/*.tar.bz2
 
 conda-dump-env:
-	mkdir -p $(artifact_dir)
+	mkdir -p $(artif_dir)
 
-	source $(conda_activate) $(conda_env); conda list --explicit > $(artifact_dir)/$(conda_env_filename).txt
+	source $(conda_activate) $(conda_env); conda list --explicit > $(artif_dir)/$(conda_env_filename).txt
 
 run-tests:
 	source $(conda_activate) $(conda_env); python run_tests.py -H -v2 -n 1 `pwd`/tests/test_big_array.py
