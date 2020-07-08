@@ -90,9 +90,6 @@ jobs:
             type: string
       executor: << parameters.os >>
       environment:
-         PKG_NAME: << pipeline.parameters.pkg_name >>
-         REPO_NAME: << pipeline.parameters.repo_name >>
-         LAST_STABLE: << pipeline.parameters.last_stable >>
          PY_VER: << parameters.py_ver >>
       steps:
          - checkout
@@ -118,8 +115,6 @@ jobs:
             type: string
       executor: << parameters.os >>
       environment:
-         PKG_NAME: << pipeline.parameters.pkg_name >>
-         ENV_NAME: << pipeline.parameters.env_name >>
          PY_VER: << parameters.py_ver >>
          LIBNETCDF: << parameters.libnetcdf >>
       steps:
@@ -141,8 +136,6 @@ jobs:
       machine:
          image: circleci/classic:latest
       environment:
-         USER: << pipeline.parameters.user >>
-         LABEL: << pipeline.parameters.label >>
          PY_VER: "3.7"
       steps:
          - checkout
